@@ -965,40 +965,8 @@ function initBook(){
   pf.loadFromHTML(pages);
   pf.on("flip",e=>{placeBook(e.data); setPlay(e.data);});
   pf.on("changeOrientation",()=>placeBook(pf.getCurrentPageIndex()));
-  pf.on("changeState",e=>{ if(e.data==="flipping"){ const i=pf.getCurrentPageIndex(); pageSound(i===0||i===LAST); }});
   pf.on("changeState",e=>{ if(e.data==="flipping"||e.data==="user_fold"){ const i=pf.getCurrentPageIndex(); if(i===0) shifter.classList.remove("at-cover"); if(i===LAST) shifter.classList.remove("at-back"); }});
   placeBook(0); setPlay(0);
-}
-/* ---------- page-turn sound (made in the browser, no audio file) ---------- */
-let actx=null;
-function pageSound(hard){
-  if(reduce) return;
-  try{
-    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
-    if(actx.state==="suspended") actx.resume();
-    const t=actx.currentTime+0.01, sr=actx.sampleRate, dur=hard?0.5:0.42, n=Math.floor(sr*dur);
-    const buf=actx.createBuffer(1,n,sr), d=buf.getChannelData(0);
-    let b=0;
-    for(let i=0;i<n;i++){                      // paper: brown + white noise with crinkle
-      const w=Math.random()*2-1; b=(b+0.05*w)/1.05;
-      const crinkle = Math.random()<0.004 ? (Math.random()*2-1)*1.6 : 0;
-      d[i]=(w*0.45+b*2.4+crinkle)*(0.55+0.45*Math.random());
-    }
-    const src=actx.createBufferSource(); src.buffer=buf; src.playbackRate.value=0.92+Math.random()*0.16;
-    const bp=actx.createBiquadFilter(); bp.type="bandpass"; bp.Q.value=0.8;
-    bp.frequency.setValueAtTime(hard?500:850,t); bp.frequency.exponentialRampToValueAtTime(hard?1800:3400,t+dur*0.65);
-    const hp=actx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=hard?120:280;
-    const g=actx.createGain(); const peak=hard?0.42:0.32;
-    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+0.07);
-    g.gain.exponentialRampToValueAtTime(peak*0.35,t+dur*0.6); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-    src.connect(hp).connect(bp).connect(g).connect(actx.destination); src.start(t); src.stop(t+dur+0.02);
-    // the page settling: a soft low flap at the end
-    const fl=actx.createBufferSource(); fl.buffer=buf;
-    const lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=hard?260:520;
-    const fg=actx.createGain(); const ft=t+dur*0.78;
-    fg.gain.setValueAtTime(0.0001,ft); fg.gain.exponentialRampToValueAtTime(hard?0.9:0.5,ft+0.012); fg.gain.exponentialRampToValueAtTime(0.0001,ft+(hard?0.16:0.09));
-    fl.connect(lp).connect(fg).connect(actx.destination); fl.start(ft); fl.stop(ft+0.2);
-  }catch(_){}
 }
 function flipTo(n){ if(!pf) return; const c=pf.getCurrentPageIndex(); if(c===n) return; if(c===0) shifter.classList.remove("at-cover"); if(c===LAST) shifter.classList.remove("at-back"); pf.flip(n); }
 initBook();
